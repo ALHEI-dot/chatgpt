@@ -2,84 +2,145 @@ package com.codex.realseasons;
 
 import com.codex.realseasons.config.RealSeasonsCadence;
 import com.codex.realseasons.config.RealSeasonsCommonConfig;
-import me.shedaniel.clothconfig2.api.ConfigBuilder;
-import me.shedaniel.clothconfig2.api.ConfigCategory;
-import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.time.DayOfWeek;
+
 /**
- * Builds the Cloth Config screen for Real Serene Seasons when available.
+ * Native Minecraft config screen. Keeping this independent of Cloth Config
+ * avoids relying on an optional Fabric UI library through Connector.
  */
-public final class RealSeasonsClientConfigScreenFactory {
-    private RealSeasonsClientConfigScreenFactory() {
+public final class RealSeasonsClientConfigScreenFactory extends Screen {
+    private final Screen parent;
+    private boolean southernHemisphere;
+    private RealSeasonsCadence cadence;
+    private boolean interpolate;
+    private String timezone;
+    private DayOfWeek weekStart;
+    private int weekMinDays;
+
+    private Button hemisphereButton;
+    private Button cadenceButton;
+    private Button interpolationButton;
+    private Button weekStartButton;
+    private EditBox timezoneField;
+    private EditBox weekMinDaysField;
+
+    private RealSeasonsClientConfigScreenFactory(Screen parent, RealSeasonsCommonConfig config) {
+        super(Component.literal("Real Serene Seasons Configuration"));
+        this.parent = parent;
+        this.southernHemisphere = config.useSouthernHemisphere();
+        this.cadence = config.cadence();
+        this.interpolate = config.interpolateTimeOfDay();
+        this.timezone = config.timezoneId();
+        this.weekStart = config.weekStartDay();
+        this.weekMinDays = config.weekMinDays();
     }
 
     public static Screen create(Screen parent) {
-        RealSeasonsCommonConfig current = RealSeasonsCommonConfig.loadOrCreate();
-        final boolean[] useSouthernHemisphere = { current.useSouthernHemisphere() };
-        final RealSeasonsCadence[] cadence = { current.cadence() };
-        final boolean[] interpolateTimeOfDay = { current.interpolateTimeOfDay() };
-        final String[] timezoneId = { current.timezoneId() };
-        final java.time.DayOfWeek[] weekStart = { current.weekStartDay() };
-        final int[] weekMinDays = { current.weekMinDays() };
+        return new RealSeasonsClientConfigScreenFactory(parent, RealSeasonsCommonConfig.loadOrCreate());
+    }
 
-        ConfigBuilder builder = ConfigBuilder.create()
-                .setParentScreen(parent)
-                .setTitle(Component.literal("Real Serene Seasons"));
-        builder.setSavingRunnable(() -> {
-            RealSeasonsCommonConfig updated = RealSeasonsCommonConfig.overwrite(
-                    useSouthernHemisphere[0],
-                    cadence[0],
-                    interpolateTimeOfDay[0],
-                    timezoneId[0],
-                    weekStart[0],
-                    weekMinDays[0]
-            );
-            RealSeasonsModInitializer.reloadConfig(updated);
-        });
+    @Override
+    protected void init() {
+        int left = this.width / 2 - 150;
+        int width = 300;
+        int y = 48;
 
-        ConfigCategory general = builder.getOrCreateCategory(Component.literal("Calendar"));
-        ConfigEntryBuilder entries = builder.entryBuilder();
+        hemisphereButton = addRenderableWidget(Button.builder(hemisphereMessage(), button -> {
+            southernHemisphere = !southernHemisphere;
+            button.setMessage(hemisphereMessage());
+        }).bounds(left, y, width, 24).build());
 
-        general.addEntry(entries.startBooleanToggle(Component.literal("Use Southern Hemisphere"), useSouthernHemisphere[0])
-                .setDefaultValue(false)
-                .setTooltip(Component.literal("Flips season order so January becomes mid summer instead of mid winter."))
-                .setSaveConsumer(value -> useSouthernHemisphere[0] = value)
-                .build());
+        cadenceButton = addRenderableWidget(Button.builder(cadenceMessage(), button -> {
+            RealSeasonsCadence[] values = RealSeasonsCadence.values();
+            cadence = values[(cadence.ordinal() + 1) % values.length];
+            button.setMessage(cadenceMessage());
+        }).bounds(left, y + 36, width, 24).build());
 
-        general.addEntry(entries.startEnumSelector(Component.literal("Cadence (per sub-season)"), RealSeasonsCadence.class, cadence[0])
-                .setDefaultValue(RealSeasonsCadence.MONTH)
-                .setTooltip(Component.literal("How long one sub-season lasts in real time: Month, Week, or Day. The full cycle is always 12 sub-seasons."))
-                .setSaveConsumer(value -> cadence[0] = value)
-                .build());
+        interpolationButton = addRenderableWidget(Button.builder(interpolationMessage(), button -> {
+            interpolate = !interpolate;
+            button.setMessage(interpolationMessage());
+        }).bounds(left, y + 72, width, 24).build());
 
-        general.addEntry(entries.startBooleanToggle(Component.literal("Interpolate Time Of Day"), interpolateTimeOfDay[0])
-                .setDefaultValue(true)
-                .setTooltip(Component.literal("If enabled, transitions happen smoothly throughout each real day."))
-                .setSaveConsumer(value -> interpolateTimeOfDay[0] = value)
-                .build());
+        timezoneField = addRenderableWidget(new EditBox(this.font, left, y + 116, width, 20,
+                Component.literal("Timezone ID")));
+        timezoneField.setMaxLength(128);
+        timezoneField.setValue(timezone == null ? "" : timezone);
 
-        general.addEntry(entries.startStrField(Component.literal("Timezone ID"), timezoneId[0])
-                .setDefaultValue("")
-                .setTooltip(Component.literal("IANA ZoneId (e.g., America/New_York, Europe/Berlin, UTC). Blank = system default."))
-                .setSaveConsumer(value -> timezoneId[0] = value)
-                .build());
+        weekStartButton = addRenderableWidget(Button.builder(weekStartMessage(), button -> {
+            DayOfWeek[] values = DayOfWeek.values();
+            weekStart = values[(weekStart.ordinal() + 1) % values.length];
+            button.setMessage(weekStartMessage());
+        }).bounds(left, y + 166, width, 24).build());
 
-        general.addEntry(entries.startEnumSelector(Component.literal("Week Start Day"), java.time.DayOfWeek.class, weekStart[0])
-                .setDefaultValue(java.time.DayOfWeek.MONDAY)
-                .setTooltip(Component.literal("Used when cadence=WEEK. First day of week."))
-                .setSaveConsumer(value -> weekStart[0] = value)
-                .build());
+        weekMinDaysField = addRenderableWidget(new EditBox(this.font, left, y + 210, width, 20,
+                Component.literal("Week minimum days")));
+        weekMinDaysField.setMaxLength(1);
+        weekMinDaysField.setValue(Integer.toString(weekMinDays));
 
-        general.addEntry(entries.startIntField(Component.literal("Week Min Days (first week)"), weekMinDays[0])
-                .setDefaultValue(4)
-                .setMin(1)
-                .setMax(7)
-                .setTooltip(Component.literal("Used when cadence=WEEK. Minimum days in first ISO week (1-7)."))
-                .setSaveConsumer(value -> weekMinDays[0] = Math.max(1, Math.min(7, value)))
-                .build());
+        addRenderableWidget(Button.builder(Component.literal("Save"), button -> saveAndClose())
+                .bounds(this.width / 2 - 154, this.height - 32, 150, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
+                .bounds(this.width / 2 + 4, this.height - 32, 150, 20).build());
+    }
 
-        return builder.build();
+    private Component hemisphereMessage() {
+        return Component.literal("Southern Hemisphere: " + (southernHemisphere ? "ON" : "OFF"));
+    }
+
+    private Component cadenceMessage() {
+        return Component.literal("Cadence: " + cadence.name() + " (change)");
+    }
+
+    private Component interpolationMessage() {
+        return Component.literal("Interpolate Time Of Day: " + (interpolate ? "ON" : "OFF"));
+    }
+
+    private Component weekStartMessage() {
+        return Component.literal("Week Start Day: " + weekStart.name() + " (change)");
+    }
+
+    private void saveAndClose() {
+        timezone = timezoneField.getValue().trim();
+        int parsedWeekMinDays = weekMinDays;
+        try {
+            parsedWeekMinDays = Integer.parseInt(weekMinDaysField.getValue().trim());
+        } catch (NumberFormatException ignored) {
+        }
+        weekMinDays = Math.max(1, Math.min(7, parsedWeekMinDays));
+
+        RealSeasonsCommonConfig updated = RealSeasonsCommonConfig.overwrite(
+                southernHemisphere, cadence, interpolate, timezone, weekStart, weekMinDays);
+        RealSeasonsModInitializer.reloadConfig(updated);
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(parent);
+        }
+    }
+
+    @Override
+    public void onClose() {
+        if (this.minecraft != null) {
+            this.minecraft.setScreen(parent);
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        renderBackground(graphics);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 18, 0xFFFFFF);
+        int left = this.width / 2 - 150;
+        int y = 48;
+        graphics.drawString(this.font, "Calendar hemisphere", left, y - 11, 0xA0A0A0);
+        graphics.drawString(this.font, "Length of each sub-season", left, y + 25, 0xA0A0A0);
+        graphics.drawString(this.font, "Smooth transitions during the day", left, y + 61, 0xA0A0A0);
+        graphics.drawString(this.font, "Timezone ID (blank uses system default)", left, y + 103, 0xA0A0A0);
+        graphics.drawString(this.font, "First day used for weekly cadence", left, y + 153, 0xA0A0A0);
+        graphics.drawString(this.font, "Minimum days in the first week (1-7)", left, y + 197, 0xA0A0A0);
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 }
