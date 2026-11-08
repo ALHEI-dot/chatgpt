@@ -2,19 +2,12 @@ package com.codex.realseasons;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
-import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.gui.screens.Screen;
 
-/**
- * Hooks the Real Serene Seasons config screen into Mod Menu when Cloth Config is present.
- */
+/** Registers the native Real Serene Seasons settings screen with Mod Menu. */
 public final class RealSeasonsClientModMenuBridge implements ModMenuApi {
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
-        return parent -> {
-            if (FabricLoader.getInstance().isModLoaded("cloth-config")) {
-                return RealSeasonsClientConfigScreenFactory.create(parent);
-            }
-            return parent;
-        };
+        return RealSeasonsClientConfigScreenFactory::create;
     }
 }
