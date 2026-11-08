@@ -11,7 +11,7 @@ public final class RealSeasonsClientModMenuBridge implements ModMenuApi {
     @Override
     public ConfigScreenFactory<?> getModConfigScreenFactory() {
         return parent -> {
-            if (FabricLoader.getInstance().isModLoaded("cloth-config2")) {
+            if (FabricLoader.getInstance().isModLoaded("cloth-config")) {
                 return RealSeasonsClientConfigScreenFactory.create(parent);
             }
             return parent;
