@@ -131,7 +131,7 @@ public final class RealSeasonsClientConfigScreenFactory extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(this.font, this.title, this.width / 2, 18, 0xFFFFFF);
         int left = this.width / 2 - 150;
         int y = 48;
