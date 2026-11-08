@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "real_serene_seasons",
+  "version": "${version}",
+  "name": "Real Serene Seasons",
+  "description": "Syncs Serene Seasons to the real-world calendar.",
+  "authors": ["cintreck", "ALHEI-dot"],
+  "contact": {
+    "sources": "https://github.com/ALHEI-dot/chatgpt"
+  },
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.codex.realseasons.RealSeasonsModInitializer"],
+    "client": ["com.codex.realseasons.RealSeasonsClientInitializer"],
+    "modmenu": ["com.codex.realseasons.RealSeasonsClientModMenuBridge"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.10",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "sereneseasons": "*"
+  },
+  "suggests": {
+    "cloth-config2": "*",
+    "modmenu": "*"
+  }
+}
