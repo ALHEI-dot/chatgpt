@@ -23,7 +23,7 @@
     "sereneseasons": "*"
   },
   "suggests": {
-    "cloth-config2": "*",
+    "cloth-config": "*",
     "modmenu": "*"
   }
 }
